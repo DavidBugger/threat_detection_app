@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-6">
+    <div class="mb-8">
+        <h2 class="text-xl font-bold mb-4">Upload Log File</h2>
+        <form id="uploadForm" class="space-y-4">
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input type="file" id="logFile" accept=".csv" class="hidden">
+                <label for="logFile" class="cursor-pointer text-blue-600 hover:text-blue-800">
+                    Click to upload or drag and drop your log file here
+                </label>
+            </div>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Analyze Logs
+            </button>
+        </form>
+    </div>
+
+    <div id="results" class="hidden">
+        <h2 class="text-xl font-bold mb-4">Analysis Results</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 border-b text-left">Username</th>
+                        <th class="px-6 py-3 border-b text-left">DateTime</th>
+                        <th class="px-6 py-3 border-b text-left">IP</th>
+                        <th class="px-6 py-3 border-b text-left">Threat Detected</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = document.getElementById('logFile').files[0];
+    if (!file) {
+        alert('Please select a file');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/analyze', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            displayResults(data.results);
+        } else {
+            alert(data.error || 'An error occurred');
+        }
+    } catch (error) {
+        alert('Error analyzing logs');
+        console.error(error);
+    }
+});
+
+function displayResults(results) {
+    const resultsDiv = document.getElementById('results');
+    const resultsBody = document.getElementById('resultsBody');
+    resultsBody.innerHTML = '';
+
+    results.forEach(result => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-6 py-4 border-b">${result['Target Username']}</td>
+            <td class="px-6 py-4 border-b">${result.DateTime}</td>
+            <td class="px-6 py-4 border-b">${result.IP}</td>
+            <td class="px-6 py-4 border-b">
+                <span class="px-2 py-1 rounded ${result.Prediction ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                    ${result.Prediction ? 'Yes' : 'No'}
+                </span>
+            </td>
+        `;
+        resultsBody.appendChild(row);
+    });
+
+    resultsDiv.classList.remove('hidden');
+}
+</script>
+{% endblock %}
